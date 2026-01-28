@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Williams Bil Spil</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #gameContainer {
+            text-align: center;
+        }
+        #gameCanvas {
+            border: 4px solid #4a90d9;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(74, 144, 217, 0.5);
+        }
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            color: white;
+        }
+        #lives, #level, #score {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #instructions {
+            color: #aaa;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #4a90d9;
+            text-align: center;
+            color: white;
+            z-index: 100;
+        }
+        #menu h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #4a90d9;
+        }
+        #menu h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+        .menu-btn {
+            background: linear-gradient(135deg, #4a90d9 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .menu-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(74, 144, 217, 0.7);
+        }
+        #garage {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            border: 3px solid #4a90d9;
+            color: white;
+            z-index: 100;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        #garage h2 {
+            color: #4a90d9;
+            margin-bottom: 20px;
+        }
+        .car-selection {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .car-option {
+            padding: 10px 20px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .car-option:hover {
+            border-color: #4a90d9;
+        }
+        .car-option.selected {
+            border-color: #ffd700;
+            background: #444;
+        }
+        .car-option.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .color-selection {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+        .color-option.selected {
+            border-color: white;
+        }
+        .color-option.locked {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <div id="lives">Lives: ❤️❤️❤️❤️</div>
+            <div id="level">Level: 1</div>
+            <div id="score">Score: 0</div>
+        </div>
+        <canvas id="gameCanvas" width="900" height="400"></canvas>
+        <div id="instructions">Press SPACEBAR to jump | Avoid obstacles | Collect small cars for extra lives</div>
+    </div>
+
+    <div id="menu">
+        <h1>🏎️ Williams Bil Spil 🏎️</h1>
+        <h2>Car Jumping Adventure</h2>
+        <div id="userSelection">
+            <h3 style="margin-bottom: 15px;">Select Player:</h3>
+            <button class="menu-btn" onclick="selectUser('William')">William</button>
+            <button class="menu-btn" onclick="selectUser('Victor')">Victor</button>
+            <button class="menu-btn" onclick="selectUser('Viggo')">Viggo</button>
+        </div>
+        <div id="gameMenu" style="display: none;">
+            <h3 style="margin-bottom: 15px; color: #ffd700;">Welcome, <span id="currentUserName"></span>!</h3>
+            <button class="menu-btn" onclick="startGame()">Start Game</button>
+            <button class="menu-btn" onclick="openGarage()">Garage</button>
+            <button class="menu-btn" onclick="backToUserSelection()">Change Player</button>
+        </div>
+    </div>
+
+    <div id="levelComplete" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.95); padding: 40px; border-radius: 20px; border: 3px solid #4a90d9; text-align: center; color: white; z-index: 100;">
+        <h1 style="color: #ffd700; font-size: 48px; margin-bottom: 20px;">🎉 Level Complete! 🎉</h1>
+        <h2 id="levelCompleteText" style="margin-bottom: 30px;">Great Job!</h2>
+        <div style="margin-bottom: 30px;">
+            <p style="font-size: 24px; margin: 10px 0;">Score: <span id="levelScore"></span></p>
+            <p style="font-size: 24px; margin: 10px 0;">Next Level: <span id="nextLevel"></span></p>
+        </div>
+        <button class="menu-btn" onclick="openGarageFromLevel()">Change Car & Color</button>
+        <button class="menu-btn" onclick="continueGame()" style="background: linear-gradient(135deg, #44FF44 0%, #33CC33 100%);">Continue</button>
+    </div>
+
+    <div id="garage">
+        <h2>🚗 Garage 🏍️</h2>
+        <h3 style="margin-bottom: 10px;">Select Vehicle:</h3>
+        <div class="car-selection" id="carTypes"></div>
+        <h3 style="margin-bottom: 10px;">Select Color:</h3>
+        <div class="color-selection" id="colorOptions"></div>
+        <button class="menu-btn" onclick="closeGarage()" style="margin-top: 20px;">Back</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+        let level = 1;
+        let lives = 4;
+        let levelProgress = 0;
+        let levelGoal = 800; // Reduced from 1000 for easier gameplay
+
+        // User management
+        let currentUser = null;
+
+        // Unlockables
+        let unlockedCars = [0]; // Car type indices
+        let unlockedColors = [0]; // Color indices
+        let selectedCar = 0;
+        let selectedColor = 0;
+
+        // Vehicle types
+        const carTypes = [
+            { name: 'Racing Car', unlockLevel: 1 },
+            { name: 'Motorcycle', unlockLevel: 2 },
+            { name: 'Pickup Truck', unlockLevel: 3 },
+            { name: 'Sports Car', unlockLevel: 4 },
+            { name: 'Police Car', unlockLevel: 5 },
+            { name: 'Fire Truck', unlockLevel: 6 },
+            { name: 'Monster Truck', unlockLevel: 8 },
+            { name: 'Muscle Car', unlockLevel: 10 },
+            { name: 'Formula 1', unlockLevel: 12 },
+            { name: 'SUV', unlockLevel: 14 },
+            { name: 'Super Car', unlockLevel: 16 },
+            { name: 'Chopper Bike', unlockLevel: 18 },
+            { name: 'Ice Cream Truck', unlockLevel: 20 },
+            { name: 'Dune Buggy', unlockLevel: 22 },
+            { name: 'Taxi', unlockLevel: 24 }
+        ];
+
+        // Available colors
+        const carColors = [
+            { name: 'Yellow', hex: '#FFD700', unlockLevel: 1 },
+            { name: 'Red', hex: '#FF4444', unlockLevel: 2 },
+            { name: 'Blue', hex: '#4444FF', unlockLevel: 3 },
+            { name: 'Green', hex: '#44FF44', unlockLevel: 4 },
+            { name: 'Purple', hex: '#AA44FF', unlockLevel: 5 },
+            { name: 'Orange', hex: '#FF8844', unlockLevel: 6 },
+            { name: 'Pink', hex: '#FF44AA', unlockLevel: 7 },
+            { name: 'Cyan', hex: '#44FFFF', unlockLevel: 8 },
+            { name: 'White', hex: '#FFFFFF', unlockLevel: 9 },
+            { name: 'Black', hex: '#333333', unlockLevel: 10 },
+            { name: 'Silver', hex: '#C0C0C0', unlockLevel: 11 },
+            { name: 'Gold', hex: '#DAA520', unlockLevel: 12 },
+            { name: 'Lime', hex: '#32CD32', unlockLevel: 13 },
+            { name: 'Teal', hex: '#008080', unlockLevel: 14 },
+            { name: 'Maroon', hex: '#800000', unlockLevel: 15 },
+            { name: 'Navy', hex: '#000080', unlockLevel: 16 },
+            { name: 'Coral', hex: '#FF7F50', unlockLevel: 17 },
+            { name: 'Turquoise', hex: '#40E0D0', unlockLevel: 18 },
+            { name: 'Violet', hex: '#EE82EE', unlockLevel: 19 },
+            { name: 'Bronze', hex: '#CD7F32', unlockLevel: 20 },
+            { name: 'Crimson', hex: '#DC143C', unlockLevel: 21 },
+            { name: 'Midnight', hex: '#191970', unlockLevel: 22 },
+            { name: 'Sunset', hex: '#FA8072', unlockLevel: 23 },
+            { name: 'Electric Blue', hex: '#7DF9FF', unlockLevel: 24 },
+            { name: 'Rainbow', hex: 'rainbow', unlockLevel: 25 }
+        ];
+
+        // Player car
+        const car = {
+            x: 100,
+            y: 300,
+            width: 80,
+            height: 40,
+            velocityY: 0,
+            jumping: false,
+            groundY: 300
+        };
+
+        // Game objects
+        let obstacles = [];
+        let lifeCars = [];
+        let groundOffset = 0;
+
+        // Physics - Made easier for kids
+        const gravity = 0.8;
+        const jumpForce = -15;
+        const gameSpeed = 4; // Reduced from 6 for easier gameplay
+        let currentSpeed = gameSpeed;
+
+        // Input handling
+        let spacePressed = false;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!spacePressed && !car.jumping && gameRunning) {
+                    car.velocityY = jumpForce;
+                    car.jumping = true;
+                }
+                spacePressed = true;
+
+                // Start game from menu
+                if (!gameRunning && document.getElementById('menu').style.display !== 'none') {
+                    startGame();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                spacePressed = false;
+            }
+        });
+
+        // User Management Functions
+        function selectUser(userName) {
+            currentUser = userName;
+            loadUserProgress();
+            document.getElementById('userSelection').style.display = 'none';
+            document.getElementById('gameMenu').style.display = 'block';
+            document.getElementById('currentUserName').textContent = userName;
+            updateUI();
+        }
+
+        function backToUserSelection() {
+            saveUserProgress();
+            currentUser = null;
+            document.getElementById('userSelection').style.display = 'block';
+            document.getElementById('gameMenu').style.display = 'none';
+        }
+
+        function loadUserProgress() {
+            const savedData = localStorage.getItem('williamsBilSpil_' + currentUser);
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                level = data.level || 1;
+                score = data.score || 0;
+                unlockedCars = data.unlockedCars || [0];
+                unlockedColors = data.unlockedColors || [0];
+                selectedCar = data.selectedCar || 0;
+                selectedColor = data.selectedColor || 0;
+            } else {
+                // Reset to defaults
+                level = 1;
+                score = 0;
+                unlockedCars = [0];
+                unlockedColors = [0];
+                selectedCar = 0;
+                selectedColor = 0;
+            }
+        }
+
+        function saveUserProgress() {
+            if (currentUser) {
+                const data = {
+                    level: level,
+                    score: score,
+                    unlockedCars: unlockedCars,
+                    unlockedColors: unlockedColors,
+                    selectedCar: selectedCar,
+                    selectedColor: selectedColor
+                };
+                localStorage.setItem('williamsBilSpil_' + currentUser, JSON.stringify(data));
+            }
+        }
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('garage').style.display = 'none';
+            document.getElementById('levelComplete').style.display = 'none';
+            gameRunning = true;
+            gamePaused = false;
+            lives = 4; // Always start with full lives
+            levelProgress = 0;
+            obstacles = [];
+            lifeCars = [];
+            car.y = car.groundY;
+            car.velocityY = 0;
+            car.jumping = false;
+            currentSpeed = gameSpeed + (level - 1) * 0.3; // Slower progression
+            updateUI();
+            gameLoop();
+        }
+
+        function continueGame() {
+            document.getElementById('levelComplete').style.display = 'none';
+            gameRunning = true; // Resume the game
+            gamePaused = false;
+            lives = 4; // Restore full lives after each level
+            levelProgress = 0;
+            obstacles = [];
+            lifeCars = [];
+            updateUI();
+            gameLoop();
+        }
+
+        function openGarageFromLevel() {
+            document.getElementById('levelComplete').style.display = 'none';
+            document.getElementById('garage').style.display = 'block';
+            renderGarage();
+        }
+
+        function openGarage() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('garage').style.display = 'block';
+            document.getElementById('levelComplete').style.display = 'none';
+            renderGarage();
+        }
+
+        function closeGarage() {
+            document.getElementById('garage').style.display = 'none';
+            if (gamePaused) {
+                document.getElementById('levelComplete').style.display = 'block';
+            } else {
+                document.getElementById('menu').style.display = 'block';
+            }
+            saveUserProgress();
+        }
+
+        function renderGarage() {
+            // Render car types
+            const carTypesDiv = document.getElementById('carTypes');
+            carTypesDiv.innerHTML = '';
+            carTypes.forEach((carType, index) => {
+                const div = document.createElement('div');
+                div.className = 'car-option';
+                if (index === selectedCar) div.classList.add('selected');
+                if (!unlockedCars.includes(index)) {
+                    div.classList.add('locked');
+                    div.innerHTML = `${carType.name}<br><small>Unlock at Level ${carType.unlockLevel}</small>`;
+                } else {
+                    div.innerHTML = carType.name;
+                    div.onclick = () => {
+                        selectedCar = index;
+                        saveUserProgress();
+                        renderGarage();
+                    };
+                }
+                carTypesDiv.appendChild(div);
+            });
+
+            // Render colors
+            const colorOptionsDiv = document.getElementById('colorOptions');
+            colorOptionsDiv.innerHTML = '';
+            carColors.forEach((color, index) => {
+                const div = document.createElement('div');
+                div.className = 'color-option';
+                div.style.backgroundColor = color.hex;
+                if (index === selectedColor) div.classList.add('selected');
+                if (!unlockedColors.includes(index)) {
+                    div.classList.add('locked');
+                    div.title = `Unlock at Level ${color.unlockLevel}`;
+                } else {
+                    div.title = color.name;
+                    div.onclick = () => {
+                        selectedColor = index;
+                        saveUserProgress();
+                        renderGarage();
+                    };
+                }
+                colorOptionsDiv.appendChild(div);
+            });
+        }
+
+        function drawCar(x, y, width, height, color, type) {
+            ctx.save();
+
+            let carColor = carColors[color].hex;
+
+            // Handle rainbow color
+            if (carColor === 'rainbow') {
+                const gradient = ctx.createLinearGradient(x, y, x + width, y);
+                gradient.addColorStop(0, '#FF0000');
+                gradient.addColorStop(0.17, '#FF7F00');
+                gradient.addColorStop(0.33, '#FFFF00');
+                gradient.addColorStop(0.5, '#00FF00');
+                gradient.addColorStop(0.67, '#0000FF');
+                gradient.addColorStop(0.83, '#4B0082');
+                gradient.addColorStop(1, '#9400D3');
+                carColor = gradient;
+            }
+
+            switch(type) {
+                case 0: // Racing Car
+                    ctx.fillStyle = carColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + height * 0.6);
+                    ctx.lineTo(x + width * 0.15, y + height * 0.3);
+                    ctx.lineTo(x + width * 0.4, y + height * 0.1);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.1);
+                    ctx.lineTo(x + width * 0.9, y + height * 0.3);
+                    ctx.lineTo(x + width, y + height * 0.6);
+                    ctx.lineTo(x + width, y + height * 0.8);
+                    ctx.lineTo(x, y + height * 0.8);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.35, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.45, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.65, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.75, y + height * 0.25);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(x + width * 0.45, y + height * 0.35, width * 0.1, height * 0.35);
+                    break;
+
+                case 1: // Motorcycle
+                    // Frame
+                    ctx.fillStyle = carColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.2, y + height * 0.5);
+                    ctx.lineTo(x + width * 0.4, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.6, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.8, y + height * 0.5);
+                    ctx.lineTo(x + width * 0.6, y + height * 0.6);
+                    ctx.lineTo(x + width * 0.4, y + height * 0.6);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Seat
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(x + width * 0.35, y + height * 0.15, width * 0.3, height * 0.15);
+
+                    // Handlebars
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.7, y + height * 0.1);
+                    ctx.lineTo(x + width * 0.75, y + height * 0.3);
+                    ctx.stroke();
+
+                    // Rider helmet
+                    ctx.fillStyle = '#222';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.5, y + height * 0.05, height * 0.15, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Wheels
+                    ctx.fillStyle = '#222';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.2, y + height * 0.75, height * 0.25, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.8, y + height * 0.75, height * 0.25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#888';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.2, y + height * 0.75, height * 0.12, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.8, y + height * 0.75, height * 0.12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    return;
+
+                case 2: // Pickup Truck
+                    // Cabin
+                    ctx.fillStyle = carColor;
+                    ctx.fillRect(x + width * 0.5, y + height * 0.1, width * 0.35, height * 0.5);
+                    // Truck bed
+                    ctx.fillRect(x + width * 0.05, y + height * 0.3, width * 0.45, height * 0.4);
+                    // Bed walls
+                    ctx.fillRect(x, y + height * 0.2, width * 0.08, height * 0.5);
+                    ctx.fillRect(x + width * 0.47, y + height * 0.2, width * 0.08, height * 0.5);
+                    // Window
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x + width * 0.55, y + height * 0.15, width * 0.25, height * 0.25);
+                    break;
+
+                case 3: // Sports Car
+                    ctx.fillStyle = carColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + height * 0.7);
+                    ctx.quadraticCurveTo(x + width * 0.2, y + height * 0.2, x + width * 0.5, y + height * 0.15);
+                    ctx.quadraticCurveTo(x + width * 0.8, y + height * 0.2, x + width, y + height * 0.5);
+                    ctx.lineTo(x + width, y + height * 0.8);
+                    ctx.lineTo(x, y + height * 0.8);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.ellipse(x + width * 0.55, y + height * 0.35, width * 0.15, height * 0.12, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+
+                case 4: // Police Car
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + height * 0.6);
+                    ctx.lineTo(x + width * 0.15, y + height * 0.3);
+                    ctx.lineTo(x + width * 0.4, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.9, y + height * 0.3);
+                    ctx.lineTo(x + width, y + height * 0.6);
+                    ctx.lineTo(x + width, y + height * 0.8);
+                    ctx.lineTo(x, y + height * 0.8);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Black bottom
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(x, y + height * 0.55, width, height * 0.25);
+                    // Light bar
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(x + width * 0.35, y + height * 0.05, width * 0.12, height * 0.12);
+                    ctx.fillStyle = '#0000FF';
+                    ctx.fillRect(x + width * 0.53, y + height * 0.05, width * 0.12, height * 0.12);
+                    // Window
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.35, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.45, y + height * 0.18);
+                    ctx.lineTo(x + width * 0.65, y + height * 0.18);
+                    ctx.lineTo(x + width * 0.75, y + height * 0.25);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+
+                case 5: // Fire Truck
+                    // Main body
+                    ctx.fillStyle = '#CC0000';
+                    ctx.fillRect(x, y + height * 0.3, width, height * 0.5);
+                    // Cabin
+                    ctx.fillRect(x + width * 0.7, y + height * 0.1, width * 0.3, height * 0.6);
+                    // Windows
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x + width * 0.75, y + height * 0.15, width * 0.2, height * 0.2);
+                    // Ladder
+                    ctx.fillStyle = '#C0C0C0';
+                    ctx.fillRect(x + width * 0.1, y + height * 0.2, width * 0.5, height * 0.08);
+                    ctx.fillRect(x + width * 0.1, y + height * 0.2, width * 0.03, height * 0.15);
+                    ctx.fillRect(x + width * 0.57, y + height * 0.2, width * 0.03, height * 0.15);
+                    // Light
+                    ctx.fillStyle = '#FF6600';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.85, y + height * 0.08, height * 0.08, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+
+                case 6: // Monster Truck
+                    ctx.fillStyle = carColor;
+                    ctx.fillRect(x + width * 0.1, y + height * 0.1, width * 0.8, height * 0.5);
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x + width * 0.5, y + height * 0.15, width * 0.35, height * 0.25);
+                    // Big wheels
+                    ctx.fillStyle = '#222';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.25, y + height * 0.85, height * 0.35, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.75, y + height * 0.85, height * 0.35, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#666';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.25, y + height * 0.85, height * 0.2, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.75, y + height * 0.85, height * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    return;
+
+                case 7: // Muscle Car
+                    ctx.fillStyle = carColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + height * 0.5);
+                    ctx.lineTo(x + width * 0.1, y + height * 0.35);
+                    ctx.lineTo(x + width * 0.3, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.85, y + height * 0.35);
+                    ctx.lineTo(x + width, y + height * 0.5);
+                    ctx.lineTo(x + width, y + height * 0.75);
+                    ctx.lineTo(x, y + height * 0.75);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Hood scoop
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(x + width * 0.15, y + height * 0.4, width * 0.15, height * 0.15);
+                    // Window
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.35, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.65, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.38);
+                    ctx.lineTo(x + width * 0.35, y + height * 0.38);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Racing stripes
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(x + width * 0.42, y + height * 0.45, width * 0.06, height * 0.25);
+                    ctx.fillRect(x + width * 0.52, y + height * 0.45, width * 0.06, height * 0.25);
+                    break;
+
+                case 8: // Formula 1
+                    ctx.fillStyle = carColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + height * 0.5);
+                    ctx.lineTo(x + width * 0.3, y + height * 0.5);
+                    ctx.lineTo(x + width * 0.35, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.65, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.5);
+                    ctx.lineTo(x + width, y + height * 0.5);
+                    ctx.lineTo(x + width, y + height * 0.7);
+                    ctx.lineTo(x, y + height * 0.7);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Spoiler
+                    ctx.fillStyle = carColor;
+                    ctx.fillRect(x - width * 0.05, y + height * 0.2, width * 0.15, height * 0.1);
+                    // Helmet
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.5, y + height * 0.35, height * 0.12, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+
+                case 9: // SUV
+                    ctx.fillStyle = carColor;
+                    ctx.fillRect(x + width * 0.05, y + height * 0.15, width * 0.9, height * 0.6);
+                    // Roof rack
+                    ctx.fillStyle = '#666';
+                    ctx.fillRect(x + width * 0.15, y + height * 0.08, width * 0.7, height * 0.08);
+                    // Windows
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x + width * 0.1, y + height * 0.2, width * 0.25, height * 0.25);
+                    ctx.fillRect(x + width * 0.4, y + height * 0.2, width * 0.25, height * 0.25);
+                    ctx.fillRect(x + width * 0.7, y + height * 0.2, width * 0.2, height * 0.25);
+                    break;
+
+                case 10: // Super Car
+                    ctx.fillStyle = carColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + height * 0.6);
+                    ctx.lineTo(x + width * 0.1, y + height * 0.4);
+                    ctx.lineTo(x + width * 0.25, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.75, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.95, y + height * 0.35);
+                    ctx.lineTo(x + width, y + height * 0.6);
+                    ctx.lineTo(x + width, y + height * 0.75);
+                    ctx.lineTo(x, y + height * 0.75);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Gull-wing door line
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.3, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.35, y + height * 0.6);
+                    ctx.stroke();
+                    ctx.fillStyle = '#222';
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.35, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.75, y + height * 0.35);
+                    ctx.lineTo(x + width * 0.35, y + height * 0.35);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+
+                case 11: // Chopper Bike
+                    // Extended front fork
+                    ctx.strokeStyle = '#888';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.85, y + height * 0.3);
+                    ctx.lineTo(x + width * 0.95, y + height * 0.7);
+                    ctx.stroke();
+                    // Frame
+                    ctx.fillStyle = carColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.15, y + height * 0.5);
+                    ctx.lineTo(x + width * 0.4, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.85, y + height * 0.4);
+                    ctx.lineTo(x + width * 0.5, y + height * 0.55);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Seat
+                    ctx.fillStyle = '#8B4513';
+                    ctx.beginPath();
+                    ctx.ellipse(x + width * 0.35, y + height * 0.3, width * 0.15, height * 0.08, -0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    // High handlebars
+                    ctx.strokeStyle = '#888';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.7, y + height * 0.05);
+                    ctx.lineTo(x + width * 0.75, y + height * 0.25);
+                    ctx.stroke();
+                    // Wheels
+                    ctx.fillStyle = '#222';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.15, y + height * 0.75, height * 0.25, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.9, y + height * 0.75, height * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#888';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.15, y + height * 0.75, height * 0.12, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.9, y + height * 0.75, height * 0.1, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    return;
+
+                case 12: // Ice Cream Truck
+                    // Main body
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(x, y + height * 0.2, width * 0.7, height * 0.6);
+                    // Cabin
+                    ctx.fillStyle = carColor;
+                    ctx.fillRect(x + width * 0.7, y + height * 0.15, width * 0.3, height * 0.6);
+                    // Serving window
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x + width * 0.15, y + height * 0.3, width * 0.35, height * 0.25);
+                    // Ice cream cone decoration
+                    ctx.fillStyle = '#F4A460';
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.35, y + height * 0.6);
+                    ctx.lineTo(x + width * 0.3, y + height * 0.1);
+                    ctx.lineTo(x + width * 0.4, y + height * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = '#FF69B4';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.35, y + height * 0.08, height * 0.12, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Window
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x + width * 0.75, y + height * 0.2, width * 0.2, height * 0.2);
+                    break;
+
+                case 13: // Dune Buggy
+                    // Roll cage
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.2, y + height * 0.6);
+                    ctx.lineTo(x + width * 0.3, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.8, y + height * 0.6);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.3, y + height * 0.15);
+                    ctx.lineTo(x + width * 0.5, y + height * 0.05);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.15);
+                    ctx.stroke();
+                    // Body
+                    ctx.fillStyle = carColor;
+                    ctx.fillRect(x + width * 0.15, y + height * 0.45, width * 0.7, height * 0.25);
+                    // Seat
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(x + width * 0.4, y + height * 0.3, width * 0.2, height * 0.2);
+                    // Big wheels with treads
+                    ctx.fillStyle = '#222';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.18, y + height * 0.8, height * 0.28, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.82, y + height * 0.8, height * 0.28, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#666';
+                    ctx.beginPath();
+                    ctx.arc(x + width * 0.18, y + height * 0.8, height * 0.15, 0, Math.PI * 2);
+                    ctx.arc(x + width * 0.82, y + height * 0.8, height * 0.15, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    return;
+
+                case 14: // Taxi
+                    // Body (yellow)
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + height * 0.55);
+                    ctx.lineTo(x + width * 0.12, y + height * 0.35);
+                    ctx.lineTo(x + width * 0.3, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.75, y + height * 0.2);
+                    ctx.lineTo(x + width * 0.9, y + height * 0.35);
+                    ctx.lineTo(x + width, y + height * 0.55);
+                    ctx.lineTo(x + width, y + height * 0.75);
+                    ctx.lineTo(x, y + height * 0.75);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Taxi sign
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(x + width * 0.4, y + height * 0.08, width * 0.2, height * 0.12);
+                    ctx.fillStyle = '#000';
+                    ctx.font = `${height * 0.08}px Arial`;
+                    ctx.fillText('TAXI', x + width * 0.42, y + height * 0.17);
+                    // Windows
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.beginPath();
+                    ctx.moveTo(x + width * 0.32, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.7, y + height * 0.25);
+                    ctx.lineTo(x + width * 0.78, y + height * 0.38);
+                    ctx.lineTo(x + width * 0.28, y + height * 0.38);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Checkered stripe
+                    ctx.fillStyle = '#000';
+                    for (let i = 0; i < 8; i++) {
+                        if (i % 2 === 0) {
+                            ctx.fillRect(x + width * 0.1 + i * width * 0.1, y + height * 0.55, width * 0.1, height * 0.08);
+                        }
+                    }
+                    break;
+
+                default: // Fallback to basic car
+                    ctx.fillStyle = carColor;
+                    ctx.fillRect(x, y + height * 0.3, width, height * 0.5);
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x + width * 0.5, y + height * 0.15, width * 0.35, height * 0.25);
+                    break;
+            }
+
+            // Standard wheels (for vehicles that didn't return early)
+            ctx.fillStyle = '#222';
+            ctx.beginPath();
+            ctx.arc(x + width * 0.2, y + height * 0.85, height * 0.2, 0, Math.PI * 2);
+            ctx.arc(x + width * 0.8, y + height * 0.85, height * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#888';
+            ctx.beginPath();
+            ctx.arc(x + width * 0.2, y + height * 0.85, height * 0.1, 0, Math.PI * 2);
+            ctx.arc(x + width * 0.8, y + height * 0.85, height * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawObstacle(obstacle) {
+            ctx.save();
+
+            switch(obstacle.type) {
+                case 'rock':
+                    ctx.fillStyle = '#666';
+                    ctx.beginPath();
+                    ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
+                    ctx.lineTo(obstacle.x + obstacle.width * 0.2, obstacle.y + obstacle.height * 0.3);
+                    ctx.lineTo(obstacle.x + obstacle.width * 0.5, obstacle.y);
+                    ctx.lineTo(obstacle.x + obstacle.width * 0.8, obstacle.y + obstacle.height * 0.2);
+                    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#888';
+                    ctx.beginPath();
+                    ctx.moveTo(obstacle.x + obstacle.width * 0.3, obstacle.y + obstacle.height * 0.5);
+                    ctx.lineTo(obstacle.x + obstacle.width * 0.5, obstacle.y + obstacle.height * 0.2);
+                    ctx.lineTo(obstacle.x + obstacle.width * 0.6, obstacle.y + obstacle.height * 0.4);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+
+                case 'barrier':
+                    ctx.fillStyle = '#FF6B35';
+                    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                    ctx.fillStyle = '#FFF';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(obstacle.x + i * obstacle.width / 3, obstacle.y, obstacle.width / 6, obstacle.height);
+                    }
+                    break;
+
+                case 'cone':
+                    ctx.fillStyle = '#FF6600';
+                    ctx.beginPath();
+                    ctx.moveTo(obstacle.x + obstacle.width / 2, obstacle.y);
+                    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                    ctx.lineTo(obstacle.x, obstacle.y + obstacle.height);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#FFF';
+                    ctx.fillRect(obstacle.x + obstacle.width * 0.3, obstacle.y + obstacle.height * 0.4, obstacle.width * 0.4, obstacle.height * 0.15);
+                    break;
+
+                case 'spike':
+                    ctx.fillStyle = '#444';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(obstacle.x + i * obstacle.width / 3, obstacle.y + obstacle.height);
+                        ctx.lineTo(obstacle.x + (i + 0.5) * obstacle.width / 3, obstacle.y);
+                        ctx.lineTo(obstacle.x + (i + 1) * obstacle.width / 3, obstacle.y + obstacle.height);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    break;
+            }
+
+            ctx.restore();
+        }
+
+        function drawLifeCar(lifeCar) {
+            ctx.save();
+
+            // Small green car
+            ctx.fillStyle = '#44FF44';
+            ctx.beginPath();
+            ctx.roundRect(lifeCar.x, lifeCar.y + 5, lifeCar.width, lifeCar.height - 10, 5);
+            ctx.fill();
+
+            // Windows
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(lifeCar.x + lifeCar.width * 0.5, lifeCar.y + 8, lifeCar.width * 0.3, lifeCar.height * 0.3);
+
+            // Wheels
+            ctx.fillStyle = '#222';
+            ctx.beginPath();
+            ctx.arc(lifeCar.x + lifeCar.width * 0.2, lifeCar.y + lifeCar.height - 5, 5, 0, Math.PI * 2);
+            ctx.arc(lifeCar.x + lifeCar.width * 0.8, lifeCar.y + lifeCar.height - 5, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Heart indicator
+            ctx.fillStyle = '#FF4444';
+            ctx.font = '14px Arial';
+            ctx.fillText('❤️', lifeCar.x + lifeCar.width / 2 - 7, lifeCar.y - 5);
+
+            // Glow effect
+            ctx.shadowColor = '#44FF44';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#44FF44';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(lifeCar.x - 2, lifeCar.y + 3, lifeCar.width + 4, lifeCar.height - 6, 7);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function spawnObstacle() {
+            const types = ['rock', 'barrier', 'cone', 'spike'];
+            const type = types[Math.floor(Math.random() * types.length)];
+
+            let width, height;
+            switch(type) {
+                case 'rock': width = 50 + Math.random() * 30; height = 40 + Math.random() * 20; break;
+                case 'barrier': width = 40; height = 50; break;
+                case 'cone': width = 30; height = 45; break;
+                case 'spike': width = 45; height = 35; break;
+            }
+
+            obstacles.push({
+                x: canvas.width + 50,
+                y: 340 - height,
+                width: width,
+                height: height,
+                type: type
+            });
+        }
+
+        function spawnLifeCar() {
+            lifeCars.push({
+                x: canvas.width + 50,
+                y: 300 + Math.random() * 20,
+                width: 40,
+                height: 25
+            });
+        }
+
+        function checkCollision(rect1, rect2) {
+            // More forgiving collision for kids - increased padding
+            const padding = 10;
+            return rect1.x + padding < rect2.x + rect2.width - padding &&
+                   rect1.x + rect1.width - padding > rect2.x + padding &&
+                   rect1.y + padding < rect2.y + rect2.height - padding &&
+                   rect1.y + rect1.height - padding > rect2.y + padding;
+        }
+
+        function updateUI() {
+            let heartsStr = '';
+            for (let i = 0; i < lives; i++) heartsStr += '❤️';
+            for (let i = lives; i < 4; i++) heartsStr += '🖤';
+            document.getElementById('lives').textContent = `Lives: ${heartsStr}`;
+            document.getElementById('level').textContent = `Level: ${level}`;
+            document.getElementById('score').textContent = `Score: ${score}`;
+        }
+
+        function levelUp() {
+            level++;
+            levelProgress = 0;
+            levelGoal += 150; // Reduced from 200 for easier progression
+            currentSpeed = gameSpeed + (level - 1) * 0.3; // Slower speed increase (was 0.5)
+
+            // Unlock colors based on their unlockLevel
+            carColors.forEach((color, index) => {
+                if (color.unlockLevel <= level && !unlockedColors.includes(index)) {
+                    unlockedColors.push(index);
+                }
+            });
+
+            // Unlock vehicles based on their unlockLevel
+            carTypes.forEach((carType, index) => {
+                if (carType.unlockLevel <= level && !unlockedCars.includes(index)) {
+                    unlockedCars.push(index);
+                }
+            });
+
+            // Pause game and show level complete screen
+            gamePaused = true;
+            gameRunning = false;
+            saveUserProgress();
+
+            // Show level complete screen
+            document.getElementById('levelCompleteText').textContent = `Amazing! You completed level ${level - 1}!`;
+            document.getElementById('levelScore').textContent = score;
+            document.getElementById('nextLevel').textContent = level;
+            document.getElementById('levelComplete').style.display = 'block';
+
+            updateUI();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            gamePaused = false;
+            const finalScore = score;
+            // Reload saved progress so player continues from last completed level
+            loadUserProgress();
+            document.getElementById('menu').style.display = 'block';
+            const h2Elements = document.getElementById('menu').querySelectorAll('h2');
+            if (h2Elements.length > 0) {
+                h2Elements[0].textContent = `Game Over! Score: ${finalScore}`;
+            }
+            updateUI();
+        }
+
+        function drawBackground() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.6, '#E0F6FF');
+            gradient.addColorStop(1, '#98D8AA');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Mountains
+            ctx.fillStyle = '#6B8E6B';
+            ctx.beginPath();
+            ctx.moveTo(0, 250);
+            for (let i = 0; i <= canvas.width; i += 100) {
+                ctx.lineTo(i, 200 + Math.sin(i * 0.01 + groundOffset * 0.001) * 50);
+            }
+            ctx.lineTo(canvas.width, 340);
+            ctx.lineTo(0, 340);
+            ctx.closePath();
+            ctx.fill();
+
+            // Ground
+            ctx.fillStyle = '#4A7C59';
+            ctx.fillRect(0, 340, canvas.width, 60);
+
+            // Road
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, 320, canvas.width, 80);
+
+            // Road markings
+            ctx.fillStyle = '#FFF';
+            for (let i = -100 + (groundOffset % 100); i < canvas.width; i += 100) {
+                ctx.fillRect(i, 355, 50, 5);
+            }
+
+            // Level progress bar
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(50, 20, canvas.width - 100, 15);
+            ctx.fillStyle = '#4a90d9';
+            ctx.fillRect(50, 20, (canvas.width - 100) * (levelProgress / levelGoal), 15);
+            ctx.strokeStyle = '#FFF';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(50, 20, canvas.width - 100, 15);
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update ground offset
+            groundOffset += currentSpeed;
+
+            // Update level progress
+            levelProgress += currentSpeed / 10;
+            score += Math.floor(currentSpeed / 10);
+
+            if (levelProgress >= levelGoal) {
+                levelUp();
+            }
+
+            // Apply gravity
+            car.velocityY += gravity;
+            car.y += car.velocityY;
+
+            // Ground collision
+            if (car.y >= car.groundY) {
+                car.y = car.groundY;
+                car.velocityY = 0;
+                car.jumping = false;
+            }
+
+            // Spawn obstacles - Made easier for kids
+            if (Math.random() < 0.012 + level * 0.001) { // Reduced spawn rate significantly
+                if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 300) { // Increased spacing
+                    spawnObstacle();
+                }
+            }
+
+            // Spawn life cars (more common for kids)
+            if (Math.random() < 0.005 && lives < 4) { // Increased from 0.003
+                if (lifeCars.length === 0 || lifeCars[lifeCars.length - 1].x < canvas.width - 300) {
+                    spawnLifeCar();
+                }
+            }
+
+            // Update obstacles
+            obstacles = obstacles.filter(obstacle => {
+                obstacle.x -= currentSpeed;
+                return obstacle.x > -100;
+            });
+
+            // Update life cars
+            lifeCars = lifeCars.filter(lifeCar => {
+                lifeCar.x -= currentSpeed * 0.8;
+                return lifeCar.x > -50;
+            });
+
+            // Draw background
+            drawBackground();
+
+            // Draw obstacles
+            obstacles.forEach(obstacle => drawObstacle(obstacle));
+
+            // Draw life cars
+            lifeCars.forEach(lifeCar => drawLifeCar(lifeCar));
+
+            // Draw player car
+            drawCar(car.x, car.y, car.width, car.height, selectedColor, selectedCar);
+
+            // Check obstacle collisions
+            const carHitbox = { x: car.x, y: car.y, width: car.width, height: car.height };
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                if (checkCollision(carHitbox, obstacles[i])) {
+                    obstacles.splice(i, 1);
+                    lives--;
+                    updateUI();
+
+                    // Flash effect
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    if (lives <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+
+            // Check life car collisions
+            for (let i = lifeCars.length - 1; i >= 0; i--) {
+                if (checkCollision(carHitbox, lifeCars[i])) {
+                    lifeCars.splice(i, 1);
+                    if (lives < 4) {
+                        lives++;
+                        updateUI();
+
+                        // Green flash effect
+                        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+                }
+            }
+
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize garage on load
+        renderGarage();
+    </script>
+</body>
+</html>
